@@ -4,12 +4,13 @@
   "version": "0.1.0",
   "description": "Outil web de gestion de cabinet paramedical",
   "scripts": {
-    "dev": "next dev apps/web",
-    "build": "next build apps/web",
-    "lint": "next lint apps/web",
+    "dev": "cd apps/web && set -a && [ -f ../../.env ] && . ../../.env; set +a && ../../node_modules/.bin/next dev",
+    "build": "cd apps/web && set -a && [ -f ../../.env ] && . ../../.env; set +a && ../../node_modules/.bin/next build",
+    "lint": "cd apps/web && ../../node_modules/.bin/next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
     "test": "vitest",
     "test:e2e": "playwright test"

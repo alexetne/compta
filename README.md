@@ -49,6 +49,19 @@ docs/roadmap/          Roadmap et montee en competence
 
 ## Demarrage propose
 
+```bash
+npm install
+cp .env.example .env
+docker compose up -d
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+Application locale: http://localhost:3000
+
+## Cadrage produit propose
+
 1. Valider les professions ciblees en premier: infirmiers, kines, orthophonistes, psychomotriciens, dieteticiens, osteopathes, etc.
 2. Choisir le niveau de gestion patient attendu: administratif simple ou dossier metier detaille.
 3. Stabiliser le modele de revenus: BNC, micro-BNC, SCM, SEL, retrocession, remplacants.
