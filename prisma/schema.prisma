@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CabinetRole {
+  OWNER
+  ADMIN
+  PRACTITIONER
+  ASSISTANT
+  ACCOUNTANT
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  CHECK
+  BANK_TRANSFER
+  THIRD_PARTY
+  OTHER
+}
+
+enum AccountingCategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DeclarationStatus {
+  OPEN
+  LOCKED
+  EXPORTED
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  name         String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  memberships  CabinetMember[]
+  auditLogs    AuditLog[]
+  appointments Appointment[]   @relation("PractitionerAppointments")
+}
+
+model Cabinet {
+  id                   String               @id @default(cuid())
+  name                 String
+  legalName            String?
+  siret                String?
+  fiscalRegime         String?
+  currency             String               @default("EUR")
+  timezone             String               @default("Europe/Paris")
+  fiscalYearStartMonth Int                  @default(1)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  members              CabinetMember[]
+  locations            CabinetLocation[]
+  patients             Patient[]
+  appointments         Appointment[]
+  serviceItems         ServiceItem[]
+  invoices             Invoice[]
+  payments             Payment[]
+  expenses             Expense[]
+  categories           AccountingCategory[]
+  declarationPeriods   DeclarationPeriod[]
+  exportJobs           ExportJob[]
+  auditLogs            AuditLog[]
+}
+
+model CabinetMember {
+  id        String      @id @default(cuid())
+  cabinetId String
+  userId    String
+  role      CabinetRole
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  cabinet   Cabinet     @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cabinetId, userId])
+  @@index([userId])
+}
+
+model CabinetLocation {
+  id        String   @id @default(cuid())
+  cabinetId String
+  name      String
+  address   String?
+  city      String?
+  zipCode   String?
+  country   String   @default("FR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cabinet   Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId])
+}
+
+model Patient {
+  id                  String        @id @default(cuid())
+  cabinetId           String
+  firstName           String
+  lastName            String
+  email               String?
+  phone               String?
+  birthDate           DateTime?
+  administrativeNotes String?
+  active              Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+  cabinet             Cabinet       @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  appointments        Appointment[]
+  invoices            Invoice[]
+
+  @@index([cabinetId, lastName, firstName])
+  @@index([cabinetId, active])
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  cabinetId      String
+  patientId      String?
+  practitionerId String?
+  serviceItemId  String?
+  startsAt       DateTime
+  endsAt         DateTime
+  status         AppointmentStatus @default(SCHEDULED)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  cabinet        Cabinet           @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  patient        Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  practitioner   User?             @relation("PractitionerAppointments", fields: [practitionerId], references: [id], onDelete: SetNull)
+  serviceItem    ServiceItem?      @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+
+  @@index([cabinetId, startsAt])
+  @@index([cabinetId, status])
+}
+
+model ServiceItem {
+  id                  String        @id @default(cuid())
+  cabinetId           String
+  accountingCategoryId String?
+  name                String
+  description         String?
+  defaultDurationMin  Int?
+  defaultAmountCents  Int
+  currency            String        @default("EUR")
+  active              Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  cabinet             Cabinet       @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  accountingCategory  AccountingCategory? @relation(fields: [accountingCategoryId], references: [id], onDelete: SetNull)
+  appointments        Appointment[]
+  invoiceLines        InvoiceLine[]
+
+  @@index([cabinetId, active])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  cabinetId     String
+  patientId     String?
+  invoiceNumber String
+  status        InvoiceStatus @default(DRAFT)
+  issuedAt      DateTime?
+  dueAt         DateTime?
+  totalCents    Int           @default(0)
+  currency      String        @default("EUR")
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  cancelledAt   DateTime?
+  cabinet       Cabinet       @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  patient       Patient?      @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  lines         InvoiceLine[]
+  payments      Payment[]
+
+  @@unique([cabinetId, invoiceNumber])
+  @@index([cabinetId, status])
+  @@index([cabinetId, issuedAt])
+}
+
+model InvoiceLine {
+  id            String       @id @default(cuid())
+  invoiceId     String
+  serviceItemId String?
+  label         String
+  quantity      Int          @default(1)
+  unitCents     Int
+  totalCents    Int
+  createdAt     DateTime     @default(now())
+  invoice       Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  cabinetId   String
+  invoiceId   String?
+  amountCents Int
+  currency    String        @default("EUR")
+  paidAt      DateTime
+  method      PaymentMethod
+  reference   String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  cabinet     Cabinet       @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  invoice     Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([cabinetId, paidAt])
+  @@index([cabinetId, method])
+}
+
+model Expense {
+  id                   String              @id @default(cuid())
+  cabinetId            String
+  accountingCategoryId String?
+  label                String
+  amountCents          Int
+  currency             String              @default("EUR")
+  expenseDate          DateTime
+  supplier             String?
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  cabinet              Cabinet             @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  accountingCategory   AccountingCategory? @relation(fields: [accountingCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([cabinetId, expenseDate])
+  @@index([cabinetId, accountingCategoryId])
+}
+
+model AccountingCategory {
+  id           String                 @id @default(cuid())
+  cabinetId    String
+  type         AccountingCategoryType
+  name         String
+  code         String?
+  active       Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  cabinet      Cabinet                @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  serviceItems ServiceItem[]
+  expenses     Expense[]
+
+  @@unique([cabinetId, name, type])
+  @@index([cabinetId, type])
+}
+
+model DeclarationPeriod {
+  id          String            @id @default(cuid())
+  cabinetId   String
+  label       String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      DeclarationStatus @default(OPEN)
+  lockedAt    DateTime?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  cabinet     Cabinet           @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId, periodStart, periodEnd])
+  @@index([cabinetId, status])
+}
+
+model ExportJob {
+  id          String       @id @default(cuid())
+  cabinetId   String
+  requestedBy String?
+  type        String
+  status      ExportStatus @default(PENDING)
+  fileUrl     String?
+  error       String?
+  filters     Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  cabinet     Cabinet      @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId, createdAt])
+  @@index([cabinetId, status])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  cabinetId    String?
+  actorUserId  String?
+  action       String
+  resourceType String
+  resourceId   String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  cabinet      Cabinet? @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([cabinetId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+}
