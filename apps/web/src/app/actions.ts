@@ -5,6 +5,8 @@ import { requirePluginEnabled } from "@/plugins/guards";
 import { setPluginEnabled } from "@/plugins/installations";
 import { getOrCreateDevSession } from "@/server/auth";
 import { createExpense } from "@/server/services/finance";
+import { createPayment } from "@/server/services/finance";
+import { cancelInvoice, createInvoice, issueInvoice } from "@/server/services/invoices";
 import { createPatient } from "@/server/services/patients";
 import { createRetrocession } from "@/server/services/retrocessions";
 import { createServiceItem } from "@/server/services/service-items";
@@ -68,6 +70,87 @@ export async function createExpenseAction(formData: FormData) {
   });
 
   revalidatePath("/charges");
+  revalidatePath("/");
+}
+
+export async function createInvoiceAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "billing.invoices");
+  const today = new Date().toISOString();
+  const serviceItemId = optionalString(formData.get("serviceItemId"));
+  const serviceLabel = optionalString(formData.get("serviceLabel"));
+
+  await createInvoice(session.cabinetId, {
+    patientId: optionalString(formData.get("patientId")),
+    issuedAt: optionalString(formData.get("issuedAt"))
+      ? new Date(formData.get("issuedAt")?.toString() ?? today).toISOString()
+      : undefined,
+    dueAt: optionalString(formData.get("dueAt"))
+      ? new Date(formData.get("dueAt")?.toString() ?? today).toISOString()
+      : undefined,
+    notes: optionalString(formData.get("notes")),
+    lines: [
+      {
+        serviceItemId,
+        label: serviceLabel ?? formData.get("label")?.toString() ?? "Prestation",
+        quantity: Number(formData.get("quantity") ?? 1),
+        unitCents: eurosToCents(formData.get("unitAmount")),
+      },
+    ],
+  });
+
+  revalidatePath("/factures");
+  revalidatePath("/");
+}
+
+export async function issueInvoiceAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "billing.invoices");
+  const invoiceId = formData.get("invoiceId")?.toString() ?? "";
+
+  await issueInvoice(session.cabinetId, invoiceId);
+
+  revalidatePath("/factures");
+  revalidatePath("/");
+}
+
+export async function cancelInvoiceAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "billing.invoices");
+  const invoiceId = formData.get("invoiceId")?.toString() ?? "";
+
+  await cancelInvoice(session.cabinetId, invoiceId);
+
+  revalidatePath("/factures");
+  revalidatePath("/");
+}
+
+export async function createPaymentAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "finance.payments");
+  const today = new Date().toISOString();
+
+  await createPayment(session.cabinetId, {
+    invoiceId: optionalString(formData.get("invoiceId")),
+    amountCents: eurosToCents(formData.get("amount")),
+    currency: "EUR",
+    paidAt: optionalString(formData.get("paidAt"))
+      ? new Date(formData.get("paidAt")?.toString() ?? today).toISOString()
+      : today,
+    method:
+      formData.get("method")?.toString() === "CASH" ||
+      formData.get("method")?.toString() === "CHECK" ||
+      formData.get("method")?.toString() === "BANK_TRANSFER" ||
+      formData.get("method")?.toString() === "THIRD_PARTY" ||
+      formData.get("method")?.toString() === "OTHER"
+        ? (formData.get("method")?.toString() as "CASH" | "CHECK" | "BANK_TRANSFER" | "THIRD_PARTY" | "OTHER")
+        : "CARD",
+    reference: optionalString(formData.get("reference")),
+    notes: optionalString(formData.get("notes")),
+  });
+
+  revalidatePath("/paiements");
+  revalidatePath("/factures");
   revalidatePath("/");
 }
 

@@ -78,6 +78,107 @@ export async function getExpensesPageData() {
   }
 }
 
+export async function getInvoicesPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "billing.invoices");
+    const [invoices, patients, serviceItems] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { cabinetId: session.cabinetId },
+        include: {
+          patient: true,
+          lines: true,
+          payments: true,
+        },
+        orderBy: [{ createdAt: "desc" }],
+        take: 100,
+      }),
+      prisma.patient.findMany({
+        where: { cabinetId: session.cabinetId, deletedAt: null },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        take: 100,
+      }),
+      prisma.serviceItem.findMany({
+        where: { cabinetId: session.cabinetId, active: true },
+        orderBy: { name: "asc" },
+        take: 100,
+      }),
+    ]);
+
+    return {
+      databaseReady: true,
+      patients,
+      serviceItems,
+      invoices: invoices.map((invoice) => {
+        const paidCents = invoice.payments.reduce(
+          (total, payment) => total + payment.amountCents,
+          0,
+        );
+
+        return {
+          ...invoice,
+          paidCents,
+          formattedTotal: formatCents(invoice.totalCents),
+          formattedPaid: formatCents(paidCents),
+        };
+      }),
+    };
+  } catch {
+    return { databaseReady: false, patients: [], serviceItems: [], invoices: [] };
+  }
+}
+
+export async function getPaymentsPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "finance.payments");
+    const [payments, invoices] = await Promise.all([
+      prisma.payment.findMany({
+        where: { cabinetId: session.cabinetId },
+        include: { invoice: { include: { patient: true } } },
+        orderBy: { paidAt: "desc" },
+        take: 100,
+      }),
+      prisma.invoice.findMany({
+        where: {
+          cabinetId: session.cabinetId,
+          status: { in: ["ISSUED", "PARTIALLY_PAID"] },
+        },
+        include: { patient: true, payments: true },
+        orderBy: { issuedAt: "desc" },
+        take: 100,
+      }),
+    ]);
+
+    return {
+      databaseReady: true,
+      payments: payments.map((payment) => ({
+        ...payment,
+        formattedAmount: formatCents(payment.amountCents),
+      })),
+      invoices: invoices.map((invoice) => {
+        const paidCents = invoice.payments.reduce(
+          (total, payment) => total + payment.amountCents,
+          0,
+        );
+        const remainingCents = Math.max(invoice.totalCents - paidCents, 0);
+
+        return {
+          ...invoice,
+          remainingCents,
+          formattedRemaining: formatCents(remainingCents),
+        };
+      }),
+    };
+  } catch {
+    return { databaseReady: false, payments: [], invoices: [] };
+  }
+}
+
 export async function getRetrocessionsPageData() {
   noStore();
 

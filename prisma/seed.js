@@ -24,6 +24,8 @@ const defaultPluginIds = [
   "care.patients",
   "care.appointments",
   "cabinet.service-items",
+  "billing.invoices",
+  "finance.payments",
   "finance.accounting",
   "admin.declarations",
   "admin.exports",

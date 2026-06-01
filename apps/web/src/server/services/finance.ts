@@ -7,6 +7,7 @@ import {
 import { writeAuditLog } from "../audit";
 import { requireCabinetPermission } from "../auth";
 import { prisma } from "../db";
+import { syncInvoicePaymentStatus } from "./invoices";
 
 export async function createExpense(cabinetId: string, input: CreateExpenseInput) {
   const session = await requireCabinetPermission(cabinetId, "accounting.manage");
@@ -41,6 +42,24 @@ export async function createPayment(cabinetId: string, input: CreatePaymentInput
   const session = await requireCabinetPermission(cabinetId, "billing.manage");
   const data = createPaymentSchema.parse(input);
 
+  if (data.invoiceId) {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: data.invoiceId, cabinetId },
+      include: { payments: true },
+    });
+
+    if (!invoice || invoice.status === "DRAFT" || invoice.status === "CANCELLED") {
+      throw new Error("Paiement impossible sur cette facture");
+    }
+
+    const paidCents = invoice.payments.reduce((total, payment) => total + payment.amountCents, 0);
+    const remainingCents = invoice.totalCents - paidCents;
+
+    if (data.amountCents > remainingCents) {
+      throw new Error("Le paiement depasse le reste a regler");
+    }
+  }
+
   const payment = await prisma.payment.create({
     data: {
       cabinetId,
@@ -62,6 +81,10 @@ export async function createPayment(cabinetId: string, input: CreatePaymentInput
     resourceId: payment.id,
     metadata: { amountCents: payment.amountCents, method: payment.method },
   });
+
+  if (payment.invoiceId) {
+    await syncInvoicePaymentStatus(payment.invoiceId);
+  }
 
   return payment;
 }

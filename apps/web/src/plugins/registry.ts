@@ -3,6 +3,8 @@ import { appointmentsPlugin } from "./builtin/appointments";
 import { cabinetPlugin } from "./builtin/cabinet";
 import { declarationsPlugin } from "./builtin/declarations";
 import { exportsPlugin } from "./builtin/exports";
+import { invoicesPlugin } from "./builtin/invoices";
+import { paymentsPlugin } from "./builtin/payments";
 import { patientsPlugin } from "./builtin/patients";
 import { retrocessionsPlugin } from "./builtin/retrocessions";
 import { serviceItemsPlugin } from "./builtin/service-items";
@@ -13,6 +15,8 @@ export const pluginRegistry = [
   patientsPlugin,
   appointmentsPlugin,
   serviceItemsPlugin,
+  invoicesPlugin,
+  paymentsPlugin,
   accountingPlugin,
   declarationsPlugin,
   exportsPlugin,
