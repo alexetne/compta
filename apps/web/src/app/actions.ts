@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePluginEnabled } from "@/plugins/guards";
 import { setPluginEnabled } from "@/plugins/installations";
 import { getOrCreateDevSession } from "@/server/auth";
+import { createAppointment, updateAppointmentStatus } from "@/server/services/appointments";
 import { createExpense } from "@/server/services/finance";
 import { createPayment } from "@/server/services/finance";
 import { cancelInvoice, createInvoice, issueInvoice } from "@/server/services/invoices";
@@ -21,6 +22,17 @@ function eurosToCents(value: FormDataEntryValue | null) {
   return Math.round(Number(raw) * 100);
 }
 
+function dateTimeFromForm(dateValue: FormDataEntryValue | null, timeValue: FormDataEntryValue | null) {
+  const date = dateValue?.toString();
+  const time = timeValue?.toString();
+
+  if (!date || !time) {
+    return new Date().toISOString();
+  }
+
+  return new Date(`${date}T${time}`).toISOString();
+}
+
 export async function createPatientAction(formData: FormData) {
   const session = await getOrCreateDevSession();
   await requirePluginEnabled(session.cabinetId, "care.patients");
@@ -34,6 +46,46 @@ export async function createPatientAction(formData: FormData) {
   });
 
   revalidatePath("/patients");
+  revalidatePath("/");
+}
+
+export async function createAppointmentAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "care.appointments");
+  const startsAt = dateTimeFromForm(formData.get("date"), formData.get("startsAt"));
+  const endsAt = dateTimeFromForm(formData.get("date"), formData.get("endsAt"));
+
+  await createAppointment(session.cabinetId, {
+    patientId: optionalString(formData.get("patientId")),
+    serviceItemId: optionalString(formData.get("serviceItemId")),
+    practitionerId: session.user.id,
+    startsAt,
+    endsAt,
+    status: "SCHEDULED",
+    notes: optionalString(formData.get("notes")),
+  });
+
+  revalidatePath("/agenda");
+  revalidatePath("/");
+}
+
+export async function updateAppointmentStatusAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "care.appointments");
+  const appointmentId = formData.get("appointmentId")?.toString() ?? "";
+  const status = formData.get("status")?.toString();
+
+  await updateAppointmentStatus(session.cabinetId, appointmentId, {
+    status:
+      status === "CONFIRMED" ||
+      status === "CANCELLED" ||
+      status === "NO_SHOW" ||
+      status === "COMPLETED"
+        ? status
+        : "SCHEDULED",
+  });
+
+  revalidatePath("/agenda");
   revalidatePath("/");
 }
 

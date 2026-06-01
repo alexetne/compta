@@ -67,6 +67,8 @@ Fonctions:
 - Statuts: planifie, confirme, annule, absent, termine
 - Liaison optionnelle a une prestation
 - Vue jour/semaine/mois
+- Creation et mise a jour de statut depuis le plugin Agenda
+- Contribution au dashboard via rendez-vous termines du mois
 
 ## 5. Prestations et actes
 

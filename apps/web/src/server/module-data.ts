@@ -30,6 +30,41 @@ export async function getPatientsPageData() {
   }
 }
 
+export async function getAppointmentsPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "care.appointments");
+    const [appointments, patients, serviceItems] = await Promise.all([
+      prisma.appointment.findMany({
+        where: { cabinetId: session.cabinetId },
+        include: {
+          patient: true,
+          serviceItem: true,
+          practitioner: true,
+        },
+        orderBy: { startsAt: "asc" },
+        take: 100,
+      }),
+      prisma.patient.findMany({
+        where: { cabinetId: session.cabinetId, deletedAt: null, active: true },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        take: 100,
+      }),
+      prisma.serviceItem.findMany({
+        where: { cabinetId: session.cabinetId, active: true },
+        orderBy: { name: "asc" },
+        take: 100,
+      }),
+    ]);
+
+    return { databaseReady: true, appointments, patients, serviceItems };
+  } catch {
+    return { databaseReady: false, appointments: [], patients: [], serviceItems: [] };
+  }
+}
+
 export async function getServiceItemsPageData() {
   noStore();
 

@@ -7,10 +7,10 @@ export const appointmentsPlugin: AppPlugin = {
   name: "Agenda",
   description: "Rendez-vous, statuts de seance et planification praticien.",
   category: "care",
-  status: "available",
+  status: "enabled",
   defaultEnabled: true,
   navItems: [
-    { label: "Agenda", href: "/agenda", status: "A faire", permission: "appointments.manage" },
+    { label: "Agenda", href: "/agenda", status: "Actif", permission: "appointments.manage" },
   ],
   async getDashboardContribution({ cabinetId }) {
     const { start, end } = currentMonthRange();
