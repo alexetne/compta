@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
+import { requirePluginEnabled } from "@/plugins/guards";
 import { getOrCreateDevSession } from "./auth";
 import { prisma } from "./db";
 
@@ -16,6 +17,7 @@ export async function getPatientsPageData() {
 
   try {
     const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "care.patients");
     const patients = await prisma.patient.findMany({
       where: { cabinetId: session.cabinetId, deletedAt: null },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -33,6 +35,7 @@ export async function getServiceItemsPageData() {
 
   try {
     const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "cabinet.service-items");
     const serviceItems = await prisma.serviceItem.findMany({
       where: { cabinetId: session.cabinetId, active: true },
       orderBy: { name: "asc" },
@@ -56,6 +59,7 @@ export async function getExpensesPageData() {
 
   try {
     const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "finance.accounting");
     const expenses = await prisma.expense.findMany({
       where: { cabinetId: session.cabinetId },
       orderBy: { expenseDate: "desc" },

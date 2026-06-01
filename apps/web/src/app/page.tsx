@@ -12,6 +12,9 @@ export default async function HomePage() {
           <h1>{dashboard.cabinetName}</h1>
         </div>
         <div className="topbar-actions">
+          <Link className="button button-secondary" href="/plugins">
+            Plugins
+          </Link>
           <Link className="button button-secondary" href="/patients">
             Patients
           </Link>
@@ -113,9 +116,12 @@ export default async function HomePage() {
               <article className="panel action-panel">
                 <div>
                   <p className="panel-kicker">Prochaine etape</p>
-                  <h2>Construire le flux cabinet</h2>
+                  <h2>Composer le cabinet avec les bons plugins</h2>
                 </div>
                 <div className="quick-actions">
+                  <Link className="button button-primary" href="/plugins">
+                    Gerer les plugins
+                  </Link>
                   <Link className="button button-primary" href="/patients">
                     Ajouter un patient
                   </Link>

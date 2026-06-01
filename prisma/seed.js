@@ -19,6 +19,16 @@ function addMinutes(date, minutes) {
   return next;
 }
 
+const defaultPluginIds = [
+  "core.cabinet",
+  "care.patients",
+  "care.appointments",
+  "cabinet.service-items",
+  "finance.accounting",
+  "admin.declarations",
+  "admin.exports",
+];
+
 async function main() {
   const monthStart = startOfCurrentMonth();
 
@@ -54,6 +64,25 @@ async function main() {
       },
     });
   }
+
+  await Promise.all(
+    defaultPluginIds.map((pluginId) =>
+      prisma.pluginInstallation.upsert({
+        where: {
+          cabinetId_pluginId: {
+            cabinetId: cabinet.id,
+            pluginId,
+          },
+        },
+        update: { enabled: true },
+        create: {
+          cabinetId: cabinet.id,
+          pluginId,
+          enabled: true,
+        },
+      }),
+    ),
+  );
 
   const honoraires = await prisma.accountingCategory.upsert({
     where: {

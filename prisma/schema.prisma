@@ -92,6 +92,7 @@ model Cabinet {
   declarationPeriods   DeclarationPeriod[]
   exportJobs           ExportJob[]
   auditLogs            AuditLog[]
+  pluginInstallations  PluginInstallation[]
 }
 
 model CabinetMember {
@@ -329,4 +330,18 @@ model AuditLog {
   @@index([cabinetId, createdAt])
   @@index([actorUserId, createdAt])
   @@index([resourceType, resourceId])
+}
+
+model PluginInstallation {
+  id          String   @id @default(cuid())
+  cabinetId   String
+  pluginId    String
+  enabled     Boolean  @default(true)
+  settings    Json?
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cabinet     Cabinet  @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@unique([cabinetId, pluginId])
+  @@index([cabinetId, enabled])
 }

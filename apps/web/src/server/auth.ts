@@ -1,4 +1,5 @@
 import type { CabinetRole, User } from "@prisma/client";
+import { ensureDefaultPluginsInstalled } from "@/plugins/installations";
 import { prisma } from "./db";
 import { ForbiddenError, hasPermission, type Permission } from "./permissions";
 
@@ -24,6 +25,8 @@ export async function getOrCreateDevSession(): Promise<CabinetSession> {
   });
 
   if (existingMembership) {
+    await ensureDefaultPluginsInstalled(existingMembership.cabinetId);
+
     return {
       user,
       cabinetId: existingMembership.cabinetId,
@@ -66,6 +69,8 @@ export async function getOrCreateDevSession(): Promise<CabinetSession> {
       },
     },
   });
+
+  await ensureDefaultPluginsInstalled(cabinet.id);
 
   return { user, cabinetId: cabinet.id, role: "OWNER" };
 }

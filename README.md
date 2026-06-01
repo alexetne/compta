@@ -75,6 +75,7 @@ Application locale: http://localhost:3000
 - [Taxonomie metier](docs/product/taxonomy.md)
 - [Architecture technique](docs/technical/architecture.md)
 - [Conventions de developpement](docs/technical/conventions.md)
+- [Architecture plugin](docs/technical/plugins.md)
 - [Modele de donnees](docs/database/model.md)
 - [Schema Prisma initial](prisma/schema.prisma)
 - [Contrats API](docs/api/contracts.md)
