@@ -77,3 +77,27 @@ export async function getExpensesPageData() {
     return { databaseReady: false, expenses: [] };
   }
 }
+
+export async function getRetrocessionsPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "finance.retrocessions");
+    const retrocessions = await prisma.retrocession.findMany({
+      where: { cabinetId: session.cabinetId },
+      orderBy: [{ periodStart: "desc" }, { createdAt: "desc" }],
+      take: 100,
+    });
+
+    return {
+      databaseReady: true,
+      retrocessions: retrocessions.map((retrocession) => ({
+        ...retrocession,
+        formattedAmount: formatCents(retrocession.amountCents),
+      })),
+    };
+  } catch {
+    return { databaseReady: false, retrocessions: [] };
+  }
+}

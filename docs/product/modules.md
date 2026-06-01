@@ -130,7 +130,35 @@ Categories initiales:
 - Cotisations
 - Frais bancaires
 
-## 8. Declarations
+## 8. Retrocessions
+
+Fonctions:
+
+- Activer le plugin par cabinet
+- Saisir retrocessions recues et versees
+- Identifier le collaborateur, remplacant ou tiers concerne
+- Suivre periode concernee, montant, statut et date de reglement
+- Faire remonter le solde dans le dashboard
+
+Statuts:
+
+- draft
+- due
+- settled
+- cancelled
+
+Sens:
+
+- received: retrocession recue par le cabinet
+- paid: retrocession versee par le cabinet
+
+Points sensibles:
+
+- Distinguer clairement une retrocession d'une charge ordinaire
+- Tracer les modifications dans l'audit
+- Permettre plus tard des exports dedies expert-comptable
+
+## 9. Declarations
 
 Fonctions:
 
@@ -144,7 +172,7 @@ Attention:
 
 L'application peut aider a preparer les declarations mais ne doit pas presenter un calcul fiscal comme un avis comptable certifie sans validation par un professionnel.
 
-## 9. Exports
+## 10. Exports
 
 Formats:
 
@@ -161,7 +189,7 @@ Exports MVP:
 - Patients actifs
 - Journal d'audit
 
-## 10. Tableaux de bord
+## 11. Tableaux de bord
 
 Indicateurs:
 
@@ -174,7 +202,7 @@ Indicateurs:
 - Taux d'annulation
 - Evolution mensuelle
 
-## 11. Documents
+## 12. Documents
 
 Fonctions futures:
 
@@ -183,7 +211,7 @@ Fonctions futures:
 - Expiration ou rappel
 - Export dossier comptable
 
-## 12. Audit
+## 13. Audit
 
 Evenements a tracer:
 

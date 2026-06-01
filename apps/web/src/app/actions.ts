@@ -6,6 +6,7 @@ import { setPluginEnabled } from "@/plugins/installations";
 import { getOrCreateDevSession } from "@/server/auth";
 import { createExpense } from "@/server/services/finance";
 import { createPatient } from "@/server/services/patients";
+import { createRetrocession } from "@/server/services/retrocessions";
 import { createServiceItem } from "@/server/services/service-items";
 
 function optionalString(value: FormDataEntryValue | null) {
@@ -78,5 +79,34 @@ export async function setPluginEnabledAction(formData: FormData) {
   await setPluginEnabled(session.cabinetId, pluginId, enabled);
 
   revalidatePath("/plugins");
+  revalidatePath("/");
+}
+
+export async function createRetrocessionAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "finance.retrocessions");
+  const today = new Date().toISOString();
+
+  await createRetrocession(session.cabinetId, {
+    direction: formData.get("direction")?.toString() === "RECEIVED" ? "RECEIVED" : "PAID",
+    status: formData.get("status")?.toString() === "SETTLED" ? "SETTLED" : "DUE",
+    label: formData.get("label")?.toString() ?? "",
+    counterparty: formData.get("counterparty")?.toString() ?? "",
+    amountCents: eurosToCents(formData.get("amount")),
+    currency: "EUR",
+    periodStart: optionalString(formData.get("periodStart"))
+      ? new Date(formData.get("periodStart")?.toString() ?? today).toISOString()
+      : today,
+    periodEnd: optionalString(formData.get("periodEnd"))
+      ? new Date(formData.get("periodEnd")?.toString() ?? today).toISOString()
+      : today,
+    settledAt:
+      formData.get("status")?.toString() === "SETTLED"
+        ? new Date(optionalString(formData.get("settledAt")) ?? today).toISOString()
+        : undefined,
+    notes: optionalString(formData.get("notes")),
+  });
+
+  revalidatePath("/retrocessions");
   revalidatePath("/");
 }

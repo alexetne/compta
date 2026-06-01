@@ -84,6 +84,21 @@ async function main() {
     ),
   );
 
+  await prisma.pluginInstallation.upsert({
+    where: {
+      cabinetId_pluginId: {
+        cabinetId: cabinet.id,
+        pluginId: "finance.retrocessions",
+      },
+    },
+    update: {},
+    create: {
+      cabinetId: cabinet.id,
+      pluginId: "finance.retrocessions",
+      enabled: false,
+    },
+  });
+
   const honoraires = await prisma.accountingCategory.upsert({
     where: {
       cabinetId_name_type: {
@@ -274,6 +289,41 @@ async function main() {
       startsAt: addDays(monthStart, 4),
       endsAt: addMinutes(addDays(monthStart, 4), 45),
       status: "COMPLETED",
+    },
+  });
+
+  await prisma.retrocession.upsert({
+    where: { id: "seed_retrocession_paid" },
+    update: { cabinetId: cabinet.id },
+    create: {
+      id: "seed_retrocession_paid",
+      cabinetId: cabinet.id,
+      direction: "PAID",
+      status: "DUE",
+      label: "Retrocession remplacement",
+      counterparty: "Alex Dupont",
+      amountCents: 42000,
+      periodStart: addDays(monthStart, 1),
+      periodEnd: addDays(monthStart, 15),
+      notes: "Exemple de retrocession versee a un remplacant.",
+    },
+  });
+
+  await prisma.retrocession.upsert({
+    where: { id: "seed_retrocession_received" },
+    update: { cabinetId: cabinet.id },
+    create: {
+      id: "seed_retrocession_received",
+      cabinetId: cabinet.id,
+      direction: "RECEIVED",
+      status: "SETTLED",
+      label: "Mise a disposition cabinet",
+      counterparty: "Samira Bernard",
+      amountCents: 18000,
+      periodStart: addDays(monthStart, 1),
+      periodEnd: addDays(monthStart, 30),
+      settledAt: addDays(monthStart, 20),
+      notes: "Exemple de retrocession recue.",
     },
   });
 

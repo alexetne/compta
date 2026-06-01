@@ -58,6 +58,18 @@ enum DeclarationStatus {
   EXPORTED
 }
 
+enum RetrocessionDirection {
+  RECEIVED
+  PAID
+}
+
+enum RetrocessionStatus {
+  DRAFT
+  DUE
+  SETTLED
+  CANCELLED
+}
+
 model User {
   id           String          @id @default(cuid())
   email        String          @unique
@@ -93,6 +105,7 @@ model Cabinet {
   exportJobs           ExportJob[]
   auditLogs            AuditLog[]
   pluginInstallations  PluginInstallation[]
+  retrocessions        Retrocession[]
 }
 
 model CabinetMember {
@@ -344,4 +357,26 @@ model PluginInstallation {
 
   @@unique([cabinetId, pluginId])
   @@index([cabinetId, enabled])
+}
+
+model Retrocession {
+  id          String                 @id @default(cuid())
+  cabinetId   String
+  direction   RetrocessionDirection
+  status      RetrocessionStatus     @default(DUE)
+  label       String
+  counterparty String
+  amountCents Int
+  currency    String                 @default("EUR")
+  periodStart DateTime
+  periodEnd   DateTime
+  settledAt   DateTime?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  cabinet     Cabinet                @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetId, direction])
+  @@index([cabinetId, status])
+  @@index([cabinetId, periodStart, periodEnd])
 }
