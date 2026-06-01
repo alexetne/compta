@@ -1,5 +1,7 @@
 export * from "./schemas/appointment";
 export * from "./schemas/cabinet";
+export * from "./schemas/declaration";
+export * from "./schemas/export";
 export * from "./schemas/finance";
 export * from "./schemas/invoice";
 export * from "./schemas/patient";

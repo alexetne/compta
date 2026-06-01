@@ -5,6 +5,8 @@ import { requirePluginEnabled } from "@/plugins/guards";
 import { setPluginEnabled } from "@/plugins/installations";
 import { getOrCreateDevSession } from "@/server/auth";
 import { createAppointment, updateAppointmentStatus } from "@/server/services/appointments";
+import { createDeclarationPeriod, lockDeclarationPeriod } from "@/server/services/declarations";
+import { createExportJob } from "@/server/services/exports";
 import { createExpense } from "@/server/services/finance";
 import { createPayment } from "@/server/services/finance";
 import { cancelInvoice, createInvoice, issueInvoice } from "@/server/services/invoices";
@@ -243,5 +245,63 @@ export async function createRetrocessionAction(formData: FormData) {
   });
 
   revalidatePath("/retrocessions");
+  revalidatePath("/");
+}
+
+export async function createDeclarationPeriodAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "admin.declarations");
+  const today = new Date().toISOString();
+
+  await createDeclarationPeriod(session.cabinetId, {
+    label: formData.get("label")?.toString() ?? "",
+    periodStart: optionalString(formData.get("periodStart"))
+      ? new Date(formData.get("periodStart")?.toString() ?? today).toISOString()
+      : today,
+    periodEnd: optionalString(formData.get("periodEnd"))
+      ? new Date(formData.get("periodEnd")?.toString() ?? today).toISOString()
+      : today,
+    notes: optionalString(formData.get("notes")),
+  });
+
+  revalidatePath("/declarations");
+  revalidatePath("/");
+}
+
+export async function lockDeclarationPeriodAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "admin.declarations");
+  const periodId = formData.get("periodId")?.toString() ?? "";
+
+  await lockDeclarationPeriod(session.cabinetId, periodId);
+
+  revalidatePath("/declarations");
+  revalidatePath("/");
+}
+
+export async function createExportJobAction(formData: FormData) {
+  const session = await getOrCreateDevSession();
+  await requirePluginEnabled(session.cabinetId, "admin.exports");
+  const today = new Date().toISOString();
+  const type = formData.get("type")?.toString();
+
+  await createExportJob(session.cabinetId, {
+    type:
+      type === "payments_csv" ||
+      type === "invoices_csv" ||
+      type === "expenses_csv" ||
+      type === "retrocessions_csv" ||
+      type === "declaration_summary_csv"
+        ? type
+        : "payments_csv",
+    from: optionalString(formData.get("from"))
+      ? new Date(formData.get("from")?.toString() ?? today).toISOString()
+      : today,
+    to: optionalString(formData.get("to"))
+      ? new Date(formData.get("to")?.toString() ?? today).toISOString()
+      : today,
+  });
+
+  revalidatePath("/exports");
   revalidatePath("/");
 }

@@ -329,6 +329,36 @@ async function main() {
     },
   });
 
+  await prisma.declarationPeriod.upsert({
+    where: { id: "seed_declaration_current_month" },
+    update: { cabinetId: cabinet.id },
+    create: {
+      id: "seed_declaration_current_month",
+      cabinetId: cabinet.id,
+      label: "Mois courant",
+      periodStart: monthStart,
+      periodEnd: addDays(monthStart, 30),
+      status: "OPEN",
+      notes: "Periode de demonstration pour verifier les syntheses.",
+    },
+  });
+
+  await prisma.exportJob.upsert({
+    where: { id: "seed_export_summary" },
+    update: { cabinetId: cabinet.id, requestedBy: user.id },
+    create: {
+      id: "seed_export_summary",
+      cabinetId: cabinet.id,
+      requestedBy: user.id,
+      type: "declaration_summary_csv",
+      status: "COMPLETED",
+      filters: {
+        from: monthStart.toISOString(),
+        to: addDays(monthStart, 30).toISOString(),
+      },
+    },
+  });
+
   await prisma.auditLog.create({
     data: {
       cabinetId: cabinet.id,

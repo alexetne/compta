@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { requirePluginEnabled } from "@/plugins/guards";
+import { calculateDeclarationSummary } from "./services/declarations";
 import { getOrCreateDevSession } from "./auth";
 import { prisma } from "./db";
 
@@ -235,5 +236,61 @@ export async function getRetrocessionsPageData() {
     };
   } catch {
     return { databaseReady: false, retrocessions: [] };
+  }
+}
+
+export async function getDeclarationsPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "admin.declarations");
+    const periods = await prisma.declarationPeriod.findMany({
+      where: { cabinetId: session.cabinetId },
+      orderBy: { periodStart: "desc" },
+      take: 100,
+    });
+
+    const periodsWithSummary = await Promise.all(
+      periods.map(async (period) => {
+        const summary = await calculateDeclarationSummary(
+          session.cabinetId,
+          period.periodStart,
+          period.periodEnd,
+        );
+
+        return {
+          ...period,
+          summary,
+          formattedIncome: formatCents(summary.incomeCents),
+          formattedExpenses: formatCents(summary.expenseCents),
+          formattedRetrocessionReceived: formatCents(summary.retrocessionReceivedCents),
+          formattedRetrocessionPaid: formatCents(summary.retrocessionPaidCents),
+          formattedResult: formatCents(summary.estimatedResultCents),
+        };
+      }),
+    );
+
+    return { databaseReady: true, periods: periodsWithSummary };
+  } catch {
+    return { databaseReady: false, periods: [] };
+  }
+}
+
+export async function getExportsPageData() {
+  noStore();
+
+  try {
+    const session = await getOrCreateDevSession();
+    await requirePluginEnabled(session.cabinetId, "admin.exports");
+    const exportJobs = await prisma.exportJob.findMany({
+      where: { cabinetId: session.cabinetId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return { databaseReady: true, exportJobs };
+  } catch {
+    return { databaseReady: false, exportJobs: [] };
   }
 }
